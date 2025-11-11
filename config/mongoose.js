@@ -1,28 +1,23 @@
-import _mongoose from "mongoose";
-_mongoose.set("strictQuery", true); 
-const DEFAULT_URI = process.env.MONGO_URI || "mongodb://localhost:27017/bdprueba";
-let isConnected = false;
+// config/mongoose.js
+const mongoose = require('mongoose');
 
-export async function connect(uri = DEFAULT_URI) {
-  if (isConnected) return _mongoose;
-  await _mongoose.connect(uri);
-  isConnected = true;
-  return _mongoose;
+const uri = process.env.MONGO_URI;
+if (!uri) {
+  throw new Error('MONGO_URI no definido en .env');
 }
 
-export async function disconnect() {
-  if (!isConnected) return;
-  await _mongoose.connection.close();
-  isConnected = false;
-}
+const connectMongo = async () => {
+  try {
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 10000,
+      maxPoolSize: 10,
+    });
+    console.log('[MongoDB] Conectado');
+  } catch (err) {
+    console.error('[MongoDB] Error de conexión:', err.message);
+    process.exit(1);
+  }
+};
 
-_mongoose.connection.on("connected", () => console.log("Mongoose conectado"));
-_mongoose.connection.on("error", (err) => console.error("Error en Mongoose:", err));
-_mongoose.connection.on("disconnected", () => console.log("Mongoose desconectado"));
+module.exports = { connectMongo };
 
-// ⬇️ Solo autoconecta en runtime normal, no en tests
-if (process.env.NODE_ENV !== "test") {
-  connect().then(() => console.log("Conectado a MongoDB")).catch(console.error);
-}
-
-export default _mongoose;
